@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoTrail - Carbon & Hiking Impact Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #f0f5f1;
+        }
+        .neubrutalism {
+            border: 3px solid #000;
+            box-shadow: 5px 5px 0px #000;
+            transition: all 0.2s ease;
+        }
+        .neubrutalism:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 7px 7px 0px #000;
+        }
+        .tab-active {
+            background-color: #4ade80;
+            color: #000;
+        }
+        .loading {
+            display: none;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-4xl mx-auto space-y-8">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold mb-2">🌍 EcoTrail</h1>
+            <p class="text-xl">Track Your Environmental Impact & Hiking Adventures</p>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="flex flex-wrap gap-4 justify-center mb-8">
+            <button onclick="switchTab('carbon')" id="carbonTab" class="neubrutalism px-6 py-3 bg-white rounded-lg tab-active">
+                🏭 Carbon Footprint
+            </button>
+            <button onclick="switchTab('hiking')" id="hikingTab" class="neubrutalism px-6 py-3 bg-white rounded-lg">
+                🏃‍♂️ Hiking Impact
+            </button>
+        </div>
+
+        <!-- Carbon Calculator Section -->
+        <div id="carbonSection" class="space-y-6">
+            <div class="neubrutalism bg-white p-6 rounded-lg">
+                <h2 class="text-2xl font-bold mb-4">Daily Activities</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2">Transportation (km/day)</label>
+                        <input type="number" id="transport" class="neubrutalism w-full p-2 rounded" placeholder="Distance in km">
+                    </div>
+                    <div>
+                        <label class="block mb-2">Cooking Fuel Type</label>
+                        <select id="cookingFuel" class="neubrutalism w-full p-2 rounded">
+                            <option value="lpg">LPG</option>
+                            <option value="natural_gas">Natural Gas</option>
+                            <option value="electric">Electric</option>
+                            <option value="wood">Wood</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-2">Electricity Usage (kWh/day)</label>
+                        <input type="number" id="electricity" class="neubrutalism w-full p-2 rounded" placeholder="Units in kWh">
+                    </div>
+                    <button onclick="calculateCarbon()" class="neubrutalism w-full bg-green-400 p-3 rounded-lg mt-4">
+                        Calculate Carbon Footprint
+                    </button>
+                </div>
+            </div>
+
+            <div id="carbonResult" class="neubrutalism bg-white p-6 rounded-lg hidden">
+                <h3 class="text-xl font-bold mb-4">Your Carbon Footprint</h3>
+                <div id="carbonValue" class="text-2xl font-bold text-green-600 mb-4"></div>
+                <div id="carbonTips" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- Hiking Impact Section -->
+        <div id="hikingSection" class="space-y-6 hidden">
+            <div class="neubrutalism bg-white p-6 rounded-lg">
+                <h2 class="text-2xl font-bold mb-4">Track Your Hike</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2">Trail Name</label>
+                        <input type="text" id="trailName" class="neubrutalism w-full p-2 rounded" placeholder="Enter trail name">
+                    </div>
+                    <div>
+                        <label class="block mb-2">Distance Covered (km)</label>
+                        <input type="number" id="hikeDistance" class="neubrutalism w-full p-2 rounded" placeholder="Distance in km">
+                    </div>
+                    <div>
+                        <label class="block mb-2">Waste Collected (items)</label>
+                        <input type="number" id="wasteCollected" class="neubrutalism w-full p-2 rounded" placeholder="Number of items">
+                    </div>
+                    <button onclick="trackHike()" class="neubrutalism w-full bg-green-400 p-3 rounded-lg mt-4">
+                        Log Hiking Activity
+                    </button>
+                </div>
+            </div>
+
+            <div id="hikingStats" class="neubrutalism bg-white p-6 rounded-lg hidden">
+                <h3 class="text-xl font-bold mb-4">Your Hiking Impact</h3>
+                <div id="badges" class="flex flex-wrap gap-4 mb-4"></div>
+                <div id="hikeStats" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize local storage for hiking stats
+        if (!localStorage.getItem('hikeStats')) {
+            localStorage.setItem('hikeStats', JSON.stringify({
+                totalDistance: 0,
+                wasteCollected: 0,
+                badges: []
+            }));
+        }
+
+        function switchTab(tab) {
+            const carbonSection = document.getElementById('carbonSection');
+            const hikingSection = document.getElementById('hikingSection');
+            const carbonTab = document.getElementById('carbonTab');
+            const hikingTab = document.getElementById('hikingTab');
+
+            if (tab === 'carbon') {
+                carbonSection.classList.remove('hidden');
+                hikingSection.classList.add('hidden');
+                carbonTab.classList.add('tab-active');
+                hikingTab.classList.remove('tab-active');
+            } else {
+                carbonSection.classList.add('hidden');
+                hikingSection.classList.remove('hidden');
+                carbonTab.classList.remove('tab-active');
+                hikingTab.classList.add('tab-active');
+            }
+        }
+
+        function calculateCarbon() {
+            const transport = parseFloat(document.getElementById('transport').value) || 0;
+            const cookingFuel = document.getElementById('cookingFuel').value;
+            const electricity = parseFloat(document.getElementById('electricity').value) || 0;
+
+            // Simple carbon calculation (simplified for demonstration)
+            const transportEmission = transport * 0.2; // 0.2 kg CO2 per km
+            const cookingEmission = {
+                lpg: 2.5,
+                natural_gas: 2.0,
+                electric: 1.5,
+                wood: 3.0
+            }[cookingFuel];
+            const electricityEmission = electricity * 0.85; // 0.85 kg CO2 per kWh
+
+            const totalEmission = transportEmission + cookingEmission + electricityEmission;
+
+            const resultDiv = document.getElementById('carbonResult');
+            const valueDiv = document.getElementById('carbonValue');
+            const tipsDiv = document.getElementById('carbonTips');
+
+            resultDiv.classList.remove('hidden');
+            valueDiv.textContent = `${totalEmission.toFixed(2)} kg CO2e per day`;
+
+            // Generate tips based on the results
+            const tips = [];
+            if (transportEmission > 5) tips.push("Consider using public transport or cycling for shorter distances.");
+            if (cookingFuel === 'wood') tips.push("Switch to LPG or electric cooking for lower emissions.");
+            if (electricityEmission > 4) tips.push("Try using energy-efficient appliances and turn off unused devices.");
+
+            tipsDiv.innerHTML = tips.map(tip => `<p>💡 ${tip}</p>`).join('');
+        }
+
+        function trackHike() {
+            const trailName = document.getElementById('trailName').value;
+            const distance = parseFloat(document.getElementById('hikeDistance').value) || 0;
+            const waste = parseFloat(document.getElementById('wasteCollected').value) || 0;
+
+            let stats = JSON.parse(localStorage.getItem('hikeStats'));
+            stats.totalDistance += distance;
+            stats.wasteCollected += waste;
+
+            // Award badges
+            if (distance >= 10 && !stats.badges.includes('Trail Master')) {
+                stats.badges.push('Trail Master');
+            }
+            if (waste >= 10 && !stats.badges.includes('Earth Guardian')) {
+                stats.badges.push('Earth Guardian');
+            }
+
+            localStorage.setItem('hikeStats', JSON.stringify(stats));
+            updateHikingStats();
+        }
+
+        function updateHikingStats() {
+            const stats = JSON.parse(localStorage.getItem('hikeStats'));
+            const statsDiv = document.getElementById('hikingStats');
+            const badgesDiv = document.getElementById('badges');
+
+            statsDiv.classList.remove('hidden');
+            badgesDiv.innerHTML = stats.badges.map(badge => 
+                `<div class="neubrutalism bg-yellow-300 px-4 py-2 rounded">🏅 ${badge}</div>`
+            ).join('');
+
+            document.getElementById('hikeStats').innerHTML = `
+                <p>Total Distance: ${stats.totalDistance.toFixed(2)} km</p>
+                <p>Waste Collected: ${stats.wasteCollected} items</p>
+                <p>Environmental Impact Score: ${(stats.wasteCollected * 10 + stats.totalDistance * 5).toFixed(0)}</p>
+            `;
+        }
+
+        // Initial stats update
+        updateHikingStats();
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
